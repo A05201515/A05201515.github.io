@@ -1,3 +1,8 @@
+/*Color palette from Colorbrewer2.org.
+#9ebcda - baby blue
+#8856a7 - purple
+*/
+
 body {
   background-color: #9ebcda;
   color: #8856a7;
