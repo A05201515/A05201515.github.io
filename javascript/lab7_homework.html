@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Earthquake Explorer</title>
+
+<!-- Loads the ArcGIS API styles and library -->
+  <link rel="stylesheet"
+    href="https://js.arcgis.com/4.21/esri/themes/light/main.css" />
+  <script src="https://js.arcgis.com/4.21/"></script>
+
+  <style>
+      html, body, #viewDiv {
+        padding: 0;
+        margin: 0;
+        height: 100%;
+        width: 100%;
+      }
+
+      #optionsDiv {
+        position: absolute;
+        top: 70px;
+        left: 15px;
+        background-color: white;
+        padding: 10px;
+        width: 220px;
+      }
+
+      #footer {
+        position: absolute;
+        bottom: 0;
+        background-color: white;
+        padding: 8px;
+        font-size: 12px;
+      }
+    </style>
+
+
+<script>
+  require([
+    "esri/Map",
+    "esri/views/MapView",
+    "esri/layers/TileLayer",
+    "esri/layers/FeatureLayer",
+    "esri/layers/GraphicsLayer",
+    "esri/tasks/QueryTask",
+    "esri/tasks/support/Query"
+  ], function (
+    Map, MapView, TileLayer, FeatureLayer,
+    GraphicsLayer, QueryTask, Query
+  ) {
+
+    // Add a transportation reference layer.
+    var transportationLayer = new TileLayer({
+      url: "https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer"
+    });
+
+    // Display earthquake locations on the map.
+    var earthquakeLayer = new FeatureLayer({
+      url: "https://services.arcgis.com/V6ZHFr6zdgNZuVG0/ArcGIS/rest/services/Earthquakes_in_the_past_30_days/FeatureServer/0",
+      renderer: {
+        type: "simple",
+        symbol: {
+          type: "simple-marker",
+          color: "orange",
+          size: 6,
+          outline: {
+            color: "white",
+            width: 0.5
+          }
+        }
+      }
+    });
+
+    // Create a layer for query results.
+    var resultsLayer = new GraphicsLayer();
+
+    // Create the map.
+    var map = new Map({
+      basemap: "topo-vector",
+      layers: [
+        transportationLayer,
+        earthquakeLayer,
+        resultsLayer
+      ]
+    });
+
+    // Set the initial map view.
+    var view = new MapView({
+      container: "viewDiv",
+      map: map,
+      center: [-98, 35],
+      zoom: 3
+    });
+
+    // Connect to the earthquake data.
+    var qTask = new QueryTask({
+      url: "https://services.arcgis.com/V6ZHFr6zdgNZuVG0/ArcGIS/rest/services/Earthquakes_in_the_past_30_days/FeatureServer/0"
+    });
+
+    // Run the query when the button is clicked.
+    document.getElementById("doBtn").addEventListener("click", doQuery);
+
+    function doQuery() {
+      resultsLayer.removeAll();
+
+      var field = document.getElementById("fieldSelect").value;
+      var sign = document.getElementById("signSelect").value;
+      var value = document.getElementById("valueSelect").value;
+
+      var params = new Query({
+        where: field + " " + sign + " " + value,
+        outFields: ["*"],
+        returnGeometry: true
+      });
+
+      qTask.execute(params).then(function (response) {
+        var results = response.features;
+
+        results.forEach(function (feature) {
+          feature.symbol = {
+            type: "simple-marker",
+            color: "red",
+            size: 9
+          };
+        });
+
+        resultsLayer.addMany(results);
+
+        document.getElementById("printResults").innerHTML =
+          results.length + " earthquakes found.";
+
+        if (results.length > 0) {
+          view.goTo(results);
+        }
+      }).catch(function (error) {
+        console.error("Query error:", error);
+        document.getElementById("printResults").innerHTML =
+          "Unable to retrieve earthquakes. Please try again.";
+      });
+    }
+
+  });
+</script>
+
+
+  </head>
+
+  <body>
+    <select id="labPages">
+    <option value="">-- Choose a lab task --</option>
+    <option value="https://a05201515.github.io/simple_mapping.html">Task 1: Simple Mapping</option>
+    <option value="https://a05201515.github.io/tile_layer.html">Task 2: Tile Layers</option>
+    <option value="https://a05201515.github.io/dynamic_layers.html">Task 3: Dynamic Layers</option>
+    <option value="https://a05201515.github.io/on_event.html">Task 4: On Event</option>
+    <option value="https://a05201515.github.io/basemap_gallery.html">Task 5: Basemap Gallery</option>
+    <option value="https://a05201515.github.io/query_task.html">Task 6: Query Task</option>
+  </select>
+
+  <button onclick="openLabPage()">Open Page</button>
+
+  <script>
+    function openLabPage() {
+      var selectedPage = document.getElementById("labPages").value;
+
+      if (selectedPage !== "") {
+        window.open(selectedPage, "_blank");
+      }
+    }
+  </script>
+
+  <div id="viewDiv"></div>
+
+  <div id="optionsDiv">
+    <h2>Earthquake Explorer</h2>
+
+    <p>Choose an attribute:</p>
+    <select id="fieldSelect">
+      <option value="mag">Magnitude</option>
+      <option value="depth">Depth</option>
+    </select>
+
+    <p>Choose a comparison:</p>
+    <select id="signSelect">
+      <option value="&gt;">Greater than</option>
+      <option value="&lt;">Less than</option>
+    </select>
+
+    <p>Choose a value:</p>
+    <select id="valueSelect">
+      <option value="2">2</option>
+      <option value="3">3</option>
+      <option value="4">4</option>
+      <option value="5">5</option>
+      <option value="50">50</option>
+      <option value="100">100</option>
+    </select>
+
+    <button id="doBtn">Find Earthquakes</button>
+    <p id="printResults"></p>
+  </div>
+
+  <div id="footer">
+  © Esri | Map data: Esri and earthquake data providers.
+  </div>
+
+
+  </body>
+
+</html>
